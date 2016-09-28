@@ -4,15 +4,19 @@ import string
 
 LINE_LENGTH = 70
 
+def process_input( line ):
+  out = []
+  for word in line.split():
+    word = word.translate(string.maketrans("",""), string.punctuation)
+    out.append(word.lower())
+  return out
+
 input = []
 if (len(sys.argv) > 1):
-  input = sys.argv[1].split()
+  input = process_input(sys.argv[1])
 else:
   with open('input.txt') as f:
-    for line in f:
-      for word in line.split():
-        word = word.translate(string.maketrans("",""), string.punctuation)
-        input.append(word.lower())
+    input = process_input(f.read())
 
 words = {}
 with open('words.txt') as f:
