@@ -1,4 +1,4 @@
-`letter\_writer` is a program that takes a dictionary of keywords and sentences
+`letter_writer` is a program that takes a dictionary of keywords and sentences
 and a job description ideally containing some of those key words and outputs a cover letter
 that can be submitted to that company.
 
@@ -19,7 +19,9 @@ example
 ```
 {
   "python": "I am proficient at python.",
-  "scala": ["I have become comfortable programming in Scala during my last eight month co-op term at Foobar, where I used it every day.",
-            "At Foobar, Scala was the primary language I coded in."]
+  "scala": [
+    "I have become comfortable programming in Scala during my last eight month co-op term at Foobar, where I used it every day.",
+     "At Foobar, Scala was the primary language I coded in."
+   ]
 }
 ```
