@@ -1,3 +1,2 @@
-input.txt
-words.txt
-
+.gitignore
+*.swp

@@ -1,20 +1,25 @@
-David's Cool Cover Letter Writer is a program that takes a dictionary of keywords and sentences
+`letter\_writer` is a program that takes a dictionary of keywords and sentences
 and a job description ideally containing some of those key words and outputs a cover letter
 that can be submitted to that company.
 
 ## How To Use
 
-The letter writer reads input either from a command line argument or from an 'input.txt' file
-in its directory. The program then scans the its dictionary for words that appear in the input,
+The letter writer reads input either from a command line argument or from file.
+The program then scans the provided dictionary for words that appear in the input,
 and adds the corresponding sentence to the cover letter.
 
-### Formatting the words.txt File
+## Formatting the sentences file
 
-Each line in the words.txt file represents one entry in the sentence bank. The keyword should be at
-the beginning of the line, and the corresponding sentence should follow after a '\' (backslash character).
+The sentences file is a JSON object with keys corresponding to the keywords that the program
+should look for in the job posting, and values being either sentences or an array of sentences
+from which the program will pick to put in the letter.
 
-Example line in words.txt
+example
 
 ```
-python\I am proficient at python.
+{
+  "python": "I am proficient at python.",
+  "scala": ["I have become comfortable programming in Scala during my last eight month co-op term at Foobar, where I used it every day.",
+            "At Foobar, Scala was the primary language I coded in."]
+}
 ```
