@@ -2,39 +2,51 @@
 import argparse
 import json
 import os
+import random
 import string
 import sys
 
 LINE_LENGTH = 70
 
-def process_input( line ):
+def process_input(line):
   out = []
   for word in line.split():
     word = word.translate(string.maketrans("",""), string.punctuation)
     out.append(word.lower())
   return out
 
-def grab_sentence(word, sentences):
-  sentence = sentences[word]
-  if isinstance(sentence, basestring):
-    return sentence
-  else:
-    return sentence[0]
+class Letter:
+  def __init__(self, recipient, sentences, posting):
+    self.recipient = recipient
+    self.sentences = sentences
+    self.posting = posting
 
-def write_body(posting, sentences):
-  letter = ''
-  line = ''
-  with open(os.path.expanduser(posting)) as f:
-    for l in f:
-      for word in process_input(l):
-        if word in sentences:
-          line += grab_sentence(word, sentences)
-          letter += line
-          if len(line) > LINE_LENGTH:
-            letter += "\n"
-            line = ''
-  letter += '\nSincerely,\nDavid Loukidelis\n'
-  return letter
+  def get_sentence(self, word):
+    sentence = self.sentences[word]
+    if isinstance(sentence, basestring):
+      return sentence
+    else:
+      index = int(random.uniform(0, len(sentence)))
+      return sentence[index]
+
+  def write_body(self):
+    letter = ''
+    line = ''
+    with open(os.path.expanduser(self.posting)) as f:
+      for l in f:
+        for word in process_input(l):
+          if word in self.sentences:
+            line += self.get_sentence(word)
+            letter += line
+            if len(line) > LINE_LENGTH:
+              letter += "\n"
+              line = ''
+    letter += '\nSincerely,\nDavid Loukidelis\n'
+    return letter
+
+  def write_letter(self):
+    body = self.write_body()
+    print "Dear {0},\n{1}".format(self.recipient, body)
 
 def main():
   parser = argparse.ArgumentParser(description='This script will write you a cover letter')
@@ -68,8 +80,8 @@ def main():
     "You must provide a sentences file"
     raise
 
-  body = write_body(args.posting, sentences)
-  print "Dear {0},\n{1}".format(recipient, body)
+  writer = Letter(recipient, sentences, args.posting)
+  writer.write_letter()
 
 if __name__ == "__main__":
   main()
