@@ -14,7 +14,7 @@ The sentences file is a JSON object with keys corresponding to the keywords that
 should look for in the job posting, and values being either sentences or an array of sentences
 from which the program will pick to put in the letter.
 
-example
+Example sentences file:
 
 ```
 {
