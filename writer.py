@@ -18,6 +18,7 @@ def process_input(line):
 
 class Letter(object):
   def __init__(self, recipient, sentences, posting, employer):
+    self.body = []
     self.recipient = recipient
     self.sentences = sentences
     self.posting = posting
@@ -31,20 +32,24 @@ class Letter(object):
       index = int(random.uniform(0, len(sentence)))
       return sentence[index]
 
+  def write_sentence(self, line):
+    for word in line.split():
+      if len(self.body[-1]) + len(word) > LINE_LENGTH:
+        self.body.append(word)
+      elif len(self.body[-1]):
+        self.body[-1] += ' ' + word
+      else:
+        self.body[-1] = word
+
   def write_body(self):
-    letter = ''
-    line = ''
+    self.body = ['']
     with open(os.path.expanduser(self.posting)) as f:
       for l in f:
         for word in process_input(l):
           if word in self.sentences:
-            line += self.select_sentence(word)
-            letter += line
-            if len(line) > LINE_LENGTH:
-              letter += "\n"
-              line = ''
-    letter += '\nSincerely,\nDavid Loukidelis\n'
-    return letter
+            self.write_sentence(self.select_sentence(word))
+    self.body.append('\nSincerely,\nDavid Loukidelis\n')
+    return '\n'.join(self.body)
 
   def write(self):
     body = self.write_body()
