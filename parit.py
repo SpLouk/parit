@@ -17,9 +17,10 @@ def process_input(line):
   return out
 
 class Letter(object):
-  def __init__(self, recipient, sentences, posting, employer):
+  def __init__(self, recipient, sender, sentences, posting, employer):
     self.body = []
     self.recipient = recipient
+    self.sender = sender
     self.sentences = sentences
     self.posting = posting
     self.employer = employer
@@ -48,7 +49,7 @@ class Letter(object):
         for word in process_input(l):
           if word in self.sentences:
             self.write_sentence(self.select_sentence(word))
-    self.body.append('\nSincerely,\nDavid Loukidelis\n')
+    self.body.append('\nSincerely,\n{0}\n'.format(self.sender))
     return '\n'.join(self.body)
 
   def write(self):
@@ -57,11 +58,12 @@ class Letter(object):
 
 def main():
   parser = argparse.ArgumentParser(description='This script will write you a cover letter')
-  parser.add_argument('-c', '--config', help='Config file', default='~/.config/letter_writer/config.json', required=False)
+  parser.add_argument('-c', '--config', help='Config file', default='~/.config/parit/config.json', required=False)
   parser.add_argument('-e', '--employer', help='Employer name', required=False)
   parser.add_argument('-m', '--manager', help='Hiring manager name', required=False)
   parser.add_argument('-p', '--posting', help='Job posting for which to tailor letter', required=True)
   parser.add_argument('-s', '--sentence-file', help='Map of words to sentences or lists of sentences from which the writer will make its content', required=False)
+  parser.add_argument('-S', '--sender', help='The sender of the letter (your name)', required=False)
   args = parser.parse_args()
 
   try:
@@ -77,16 +79,16 @@ def main():
   elif employer:
     recipient = 'Hiring Manager for {0}'.format(employer)
   else:
-    print 'You must provide a hiring manager or an employer name in either your config or script args'
-    raise SystemExit
+    sys.exit('You must provide a hiring manager or an employer name in either your config or an arg')
   try:
-    sentence_file = args.sentence_file or config.get('sentence_file') or '~/.config/letter_writer/sentences.json'
+    sentence_file = args.sentence_file or config.get('sentence_file') or '~/.config/parit/sentences.json'
     sentences = json.loads(open(os.path.expanduser(sentence_file)).read())
   except IOError:
-    "You must provide a sentences file"
-    raise
+    sys.exit("You must provide a sentences file")
 
-  letter = Letter(recipient, sentences, args.posting, employer)
+  sender = args.sender or config.get('sender') or sys.exit('You must provide a sender name in either your config or an arg')
+
+  letter = Letter(recipient, sender, sentences, args.posting, employer)
   letter.write()
 
 if __name__ == "__main__":
