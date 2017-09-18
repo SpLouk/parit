@@ -1,4 +1,6 @@
-`letter_writer` is a program that takes a dictionary of keywords and sentences
+# Parit
+
+`Parit` is a program that takes a dictionary of keywords and sentences
 and a job description ideally containing some of those key words and outputs a cover letter
 that can be submitted to that company.
 
