@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import random
+import scraper
 import string
 import sys
 
@@ -44,11 +45,9 @@ class Letter(object):
 
   def write_body(self):
     self.body = ['']
-    with open(os.path.expanduser(self.posting)) as f:
-      for l in f:
-        for word in process_input(l):
-          if word in self.sentences:
-            self.write_sentence(self.select_sentence(word))
+    for word in process_input(self.posting):
+      if word in self.sentences:
+        self.write_sentence(self.select_sentence(word))
     self.body.append('\nSincerely,\n{0}\n'.format(self.sender))
     return '\n'.join(self.body)
 
@@ -58,12 +57,14 @@ class Letter(object):
 
 def main():
   parser = argparse.ArgumentParser(description='This script will write you a cover letter')
-  parser.add_argument('-c', '--config', help='Config file', default='~/.config/parit/config.json', required=False)
-  parser.add_argument('-e', '--employer', help='Employer name', required=False)
-  parser.add_argument('-m', '--manager', help='Hiring manager name', required=False)
-  parser.add_argument('-p', '--posting', help='Job posting for which to tailor letter', required=True)
-  parser.add_argument('-s', '--sentence-file', help='Map of words to sentences or lists of sentences from which the writer will make its content', required=False)
-  parser.add_argument('-S', '--sender', help='The sender of the letter (your name)', required=False)
+  parser.add_argument('-c', '--config', help='Config file', default='~/.config/parit/config.json')
+  parser.add_argument('-C', '--credentials', help='Credentials file', default='~/.config/parit/credentials.json')
+  parser.add_argument('-e', '--employer', help='Employer name')
+  parser.add_argument('-m', '--manager', help='Hiring manager name')
+  parser.add_argument('-p', '--posting', help='Job posting for which to tailor letter')
+  parser.add_argument('-s', '--sentence-file', help='Map of words to sentences or lists of sentences from which the writer will make its content')
+  parser.add_argument('-S', '--sender', help='The sender of the letter (your name)')
+  parser.add_argument('-t', '--term', help='Search term for Waterloo Works')
   args = parser.parse_args()
 
   try:
@@ -88,7 +89,12 @@ def main():
 
   sender = args.sender or config.get('sender') or sys.exit('You must provide a sender name in either your config or an arg')
 
-  letter = Letter(recipient, sender, sentences, args.posting, employer)
+  creds_path = os.path.expanduser(args.credentials)
+  credentials = json.loads(open(creds_path).read())
+  session = scraper.login_cas_waterloo_works(credentials.get('username'), credentials.get('password'))
+  posting = scraper.get_postings(session, args.term)[0]
+
+  letter = Letter(recipient, sender, sentences, posting.get('required_skills'), employer)
   letter.write()
 
 if __name__ == "__main__":

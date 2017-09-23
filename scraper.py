@@ -4,16 +4,15 @@ import json
 from lxml import html
 import os
 import requests
+import string
 
 LOGIN_URL = 'https://cas.uwaterloo.ca/cas/login?service=https://waterlooworks.uwaterloo.ca/waterloo.htm'
-DASH_URL = 'https://waterlooworks.uwaterloo.ca/myAccount/dashboard.htm'
 POSTINGS_URL = "https://waterlooworks.uwaterloo.ca/myAccount/co-op/coop-postings.htm"
 
-def login_cas_waterloo_works(credentials_file):
-  credentials = json.loads(open(credentials_file).read())
+def login_cas_waterloo_works(username, password):
   payload = {
-    'username': credentials.get('username'),
-    'password': credentials.get('password'),
+    'username': username,
+    'password': password,
     'lt': 'e1s1',
     '_eventId': 'submit'
   }
@@ -22,21 +21,31 @@ def login_cas_waterloo_works(credentials_file):
   session.post(LOGIN_URL, data=payload)
   return session
 
-def print_messages(credentials_file):
-  session = login_cas_waterloo_works(credentials_file)
+def make_key(key):
+  return key.translate(string.maketrans(" ","_"), string.punctuation).lower()
+
+def parse_posting(posting):
+  # there are malformed unicode characters in the HTML of this page, so we need to process it again and ignore errors
+  page = unicode(posting.content, errors='ignore')
+
+  tree = html.fromstring(page)
+  posting = {}
+  for row in tree.xpath('//div[@id="postingDiv"]/div/div/table/tbody/tr'):
+    key = ''.join(row.xpath('td[1]/descendant::text()')).strip()
+    val = ''.join(row.xpath('td[2]/descendant::text()')).strip()
+    posting[make_key(key)] = val
+
+  return posting
+
+
+def get_posting(session, posting_id):
   payload = {
-   'action': '_-_-vWhTJA86a4chz0G0FO2Fggr-VLSSkAUQmSteqfXOa1pqs1tzsRrDAG-puLCPLDR3fGeedFNboY9UKCCn8nUykOntUtK_Cvjf4bXru3EFBnQg2qfljL3kaqOTbzGS_Lxi0Thuky2wKZMLMCWZdOKO102DaDHHi11ZzdCWckhaYtiAimFf-wnSjA',
-   'itemsPerPage':'100'
+    'action': '_-_-CZAJhGzDi93Ir5yebC9X2QzZQPKmuf0qAY5WqOitfQhUFJT3pAAHQ8WR_qCCCR0IF9vJt6KnkqRkOUMIbOwOiS9iCc2vioHN55ytvgjL1NnXn2kskxVw3GE6CalJ6PidQrNecI9flFNxn6E3C6mMzw4czSk8ygpnu7FlbiWT_Q',
+    'postingId': posting_id
   }
-  page = session.post(DASH_URL, data=payload)
-  tree = html.fromstring(page.content)
+  return parse_posting(session.post(POSTINGS_URL, data=payload))
 
-  # subjects
-  messages = tree.xpath('//table/tbody/tr/td[7]/text()')
-  print messages
-
-def print_postings(credentials_file, search_term):
-  session = login_cas_waterloo_works(credentials_file)
+def get_postings(session, search_term):
   payload = {
     'action': '_-_-MluhXCvR0n6jA3vbq7A87AJL7KvOHm7xG2EUvL3M9hTt--LmoKJexZQTg-Hc1tVOY51oqx3B0z0B3XfEwyDWpUF7tglFyshhqUlF8289hLmdQbmUc1EoqRENQ8X4t2kUlbPiyEFZ8M3wFKbiTxpVPfKD9t9X5tanfajsPtE',
     'filter': 'all',
@@ -47,17 +56,7 @@ def print_postings(credentials_file, search_term):
   tree = html.fromstring(page.content)
   posting_ids = tree.xpath('//table[@id="postingsTable"]/tbody/tr/td[3]/text()')
 
+  postings = []
   for posting_id in posting_ids:
-    payload = {
-      'action': '_-_-CZAJhGzDi93Ir5yebC9X2QzZQPKmuf0qAY5WqOitfQhUFJT3pAAHQ8WR_qCCCR0IF9vJt6KnkqRkOUMIbOwOiS9iCc2vioHN55ytvgjL1NnXn2kskxVw3GE6CalJ6PidQrNecI9flFNxn6E3C6mMzw4czSk8ygpnu7FlbiWT_Q',
-      'postingId': posting_id
-    }
-    page = session.post(POSTINGS_URL, data=payload)
-    tree = html.fromstring(page.content)
-    posting = tree.xpath('//div[@id="postingDiv"]/div/div/table/tbody/tr[17]/td[2]/text()')
-    print '--------------------------{0}--------------------------'.format(posting_id)
-    for item in posting:
-      print item.strip()
-
-if __name__ == '__main__':
-  print_messages()
+    postings.append(get_posting(session, posting_id))
+  return postings
