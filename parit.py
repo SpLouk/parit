@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+from pylatex import Command, Document, NewLine, NoEscape
 import random
 import scraper
 import string
@@ -11,20 +12,16 @@ LINE_LENGTH = 70
 
 # Takes a sentence in the form of a string and splits it into its words with all punctuation removed.
 def process_input(line):
-  out = []
-  for word in line.split():
-    word = word.translate(string.maketrans("",""), string.punctuation)
-    out.append(word.lower())
-  return out
+  line = line.translate(string.maketrans("/"," "), string.punctuation)
+  return line.split()
 
 class Letter(object):
-  def __init__(self, recipient, sender, sentences, posting, employer):
+  def __init__(self, sender, address, sentences, posting):
     self.body = []
-    self.recipient = recipient
     self.sender = sender
+    self.address = address
     self.sentences = sentences
     self.posting = posting
-    self.employer = employer
 
   def select_sentence(self, word):
     sentence = self.sentences[word]
@@ -45,15 +42,49 @@ class Letter(object):
 
   def write_body(self):
     self.body = ['']
-    for word in process_input(self.posting):
-      if word in self.sentences:
-        self.write_sentence(self.select_sentence(word))
-    self.body.append('\nSincerely,\n{0}\n'.format(self.sender))
-    return '\n'.join(self.body)
+    languages = []
+    for word in process_input(self.posting.get('required_skills')):
+      key = word.lower()
+      if key in self.sentences:
+        languages.append(word)
+        self.body.append(self.select_sentence(key))
+
+    last_lang = languages.pop()
+    opening = 'Your job posting indicated that you are looking for someone who is skilled in ' + ', '.join(languages) + ' and ' + last_lang + '.'
+    return opening + ' '.join(self.body)
 
   def write(self):
-    body = self.write_body()
-    print "Dear {0},\n\n{1}".format(self.recipient, body)
+    with open(os.path.expanduser('~/.config/parit/opening'), 'r') as f:
+        opening = f.read().replace('\n', ' ').replace('$organization', self.posting['organization'])
+    with open(os.path.expanduser('~/.config/parit/closing'), 'r') as f:
+        closing = f.read().replace('\n', ' ')
+
+    pdf_name = 'pdfs/{0}_{1}'.format(self.posting['organization'], self.posting['job_title']).replace(' ', '_').lower()
+
+    employer_address = '{0}\n{1}\n{2} {3} {4}'.format(
+      self.posting.get('organization'),
+      self.posting.get('job__address_line_one'),
+      self.posting.get('job__city'),
+      self.posting.get('job__province__state'),
+      self.posting['job__postal_code__zip_code_xx_x'])
+    return_address = '{0}\\\\{1} {2} {3}'.format(
+      self.address[0],
+      self.address[1],
+      self.address[2],
+      self.address[3])
+    output = Document(documentclass='letter')
+    output.preamble.append(Command('signature', self.sender))
+    output.preamble.append(Command('address', NoEscape(return_address)))
+    output.preamble.append(Command('date', NoEscape(r'\today')))
+    output.append(Command('begin', ['letter', employer_address]))
+    output.append(Command('opening', 'Dear Hiring Manager,'))
+    output.append(opening + self.write_body())
+    output.append(NewLine())
+    output.append(NewLine())
+    output.append(closing)
+    output.append(Command('closing', 'Sincerely,'))
+    output.append(Command('end', 'letter'))
+    output.generate_pdf(pdf_name)
 
 def main():
   parser = argparse.ArgumentParser(description='This script will write you a cover letter')
@@ -65,6 +96,7 @@ def main():
   parser.add_argument('-s', '--sentence-file', help='Map of words to sentences or lists of sentences from which the writer will make its content')
   parser.add_argument('-S', '--sender', help='The sender of the letter (your name)')
   parser.add_argument('-t', '--term', help='Search term for Waterloo Works')
+  parser.add_argument('-P', '--posting-id', help='Waterloo Works job posting Id')
   args = parser.parse_args()
 
   try:
@@ -73,14 +105,6 @@ def main():
   except IOError:
     config = {}
 
-  manager = args.manager or config.get('manager')
-  employer = args.employer or config.get('employer')
-  if manager:
-    recipient = manager
-  elif employer:
-    recipient = 'Hiring Manager for {0}'.format(employer)
-  else:
-    sys.exit('You must provide a hiring manager or an employer name in either your config or an arg')
   try:
     sentence_file = args.sentence_file or config.get('sentence_file') or '~/.config/parit/sentences.json'
     sentences = json.loads(open(os.path.expanduser(sentence_file)).read())
@@ -92,9 +116,9 @@ def main():
   creds_path = os.path.expanduser(args.credentials)
   credentials = json.loads(open(creds_path).read())
   session = scraper.login_cas_waterloo_works(credentials.get('username'), credentials.get('password'))
-  posting = scraper.get_postings(session, args.term)[0]
+  posting = scraper.get_posting(session, args.posting_id) or scraper.get_postings(session, args.term)[0]
 
-  letter = Letter(recipient, sender, sentences, posting.get('required_skills'), employer)
+  letter = Letter(sender, config.get('address').split('/'), sentences, posting)
   letter.write()
 
 if __name__ == "__main__":
