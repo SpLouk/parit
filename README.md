@@ -27,3 +27,21 @@ Example sentences file:
    ]
 }
 ```
+
+Example config file:
+
+```
+{
+  "sender": "John Doe",
+  "address": "123 Lorem Dr./Waterloo/Ontario/ABC 123"
+}
+```
+
+Example credentials file:
+
+```
+{
+  "username": "jdoe",
+  "password": "jdoe123"
+}
+```
