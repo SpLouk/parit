@@ -8,16 +8,16 @@ import scraper
 import string
 import sys
 
-LINE_LENGTH = 70
-
 # Takes a sentence in the form of a string and splits it into its words with all punctuation removed.
 def process_input(line):
-  line = line.translate(string.maketrans("/"," "), string.punctuation)
+  line = line.translate(string.maketrans("/"," "), string.punctuation.replace('+', ''))
   return line.split()
 
 class Letter(object):
-  def __init__(self, sender, address, sentences, posting):
+  def __init__(self, opening, closing, sender, address, sentences, posting):
     self.body = []
+    self.opening = opening.replace('$organization', posting['organization'])
+    self.closing = closing.replace('$organization', posting['organization'])
     self.sender = sender
     self.address = address
     self.sentences = sentences
@@ -31,42 +31,30 @@ class Letter(object):
       index = int(random.uniform(0, len(sentence)))
       return sentence[index]
 
-  def write_sentence(self, line):
-    for word in line.split():
-      if len(self.body[-1]) + len(word) > LINE_LENGTH:
-        self.body.append(word)
-      elif len(self.body[-1]):
-        self.body[-1] += ' ' + word
-      else:
-        self.body[-1] = word
-
   def write_body(self):
     self.body = ['']
-    languages = []
-    for word in process_input(self.posting.get('required_skills')):
-      key = word.lower()
-      if key in self.sentences:
-        languages.append(word)
-        self.body.append(self.select_sentence(key))
+    words = {}
+    for word in process_input(self.posting.get('job_responsibilities') + self.posting.get('required_skills')):
+      if word.lower() in self.sentences:
+        if word in words:
+          words[word] += 1
+        else:
+          words[word] = 1
 
-    last_lang = languages.pop()
-    opening = 'Your job posting indicated that you are looking for someone who is skilled in ' + ', '.join(languages) + ' and ' + last_lang + '.'
-    return opening + ' '.join(self.body)
+    for word in sorted(words, key=words.get, reverse=True):
+      self.body.append(self.select_sentence(word.lower()))
+
+    return ' '.join(self.body)
 
   def write(self):
-    with open(os.path.expanduser('~/.config/parit/opening'), 'r') as f:
-        opening = f.read().replace('\n', ' ').replace('$organization', self.posting['organization'])
-    with open(os.path.expanduser('~/.config/parit/closing'), 'r') as f:
-        closing = f.read().replace('\n', ' ')
-
-    pdf_name = 'pdfs/{0}_{1}'.format(self.posting['organization'], self.posting['job_title']).replace(' ', '_').lower()
 
     employer_address = '{0}\n{1}\n{2} {3} {4}'.format(
       self.posting.get('organization'),
       self.posting.get('job__address_line_one'),
       self.posting.get('job__city'),
       self.posting.get('job__province__state'),
-      self.posting['job__postal_code__zip_code_xx_x'])
+      self.posting.get('job__postal_code__zip_code_xx_x'))
+
     return_address = '{0}\\\\{1} {2} {3}'.format(
       self.address[0],
       self.address[1],
@@ -78,48 +66,60 @@ class Letter(object):
     output.preamble.append(Command('date', NoEscape(r'\today')))
     output.append(Command('begin', ['letter', employer_address]))
     output.append(Command('opening', 'Dear Hiring Manager,'))
-    output.append(opening + self.write_body())
+    output.append(self.opening + self.write_body())
     output.append(NewLine())
     output.append(NewLine())
-    output.append(closing)
+    output.append(self.closing)
     output.append(Command('closing', 'Sincerely,'))
     output.append(Command('end', 'letter'))
-    output.generate_pdf(pdf_name)
+
+    filename = '{0}_{1}'.format(self.posting['organization'], ' '.join(process_input(self.posting['job_title']))).replace(' ', '_').lower()
+    output.generate_pdf(filename)
 
 def main():
   parser = argparse.ArgumentParser(description='This script will write you a cover letter')
-  parser.add_argument('-c', '--config', help='Config file', default='~/.config/parit/config.json')
-  parser.add_argument('-C', '--credentials', help='Credentials file', default='~/.config/parit/credentials.json')
-  parser.add_argument('-e', '--employer', help='Employer name')
-  parser.add_argument('-m', '--manager', help='Hiring manager name')
-  parser.add_argument('-p', '--posting', help='Job posting for which to tailor letter')
-  parser.add_argument('-s', '--sentence-file', help='Map of words to sentences or lists of sentences from which the writer will make its content')
-  parser.add_argument('-S', '--sender', help='The sender of the letter (your name)')
+  parser.add_argument('-c', '--config', help=('Directory containing config file (config.json), '
+    'sentences file (sentences.json), and credentials file (credentials.json). You must have these '
+    'files for the program to run properly. (default: ~/.config/parit/)'),
+    default='~/.config/parit/')
+  parser.add_argument('-p', '--posting-id', help='Waterloo Works job posting Id')
   parser.add_argument('-t', '--term', help='Search term for Waterloo Works')
-  parser.add_argument('-P', '--posting-id', help='Waterloo Works job posting Id')
   args = parser.parse_args()
 
+  config_path = os.path.expanduser(args.config)
   try:
-    config_path = os.path.expanduser(args.config)
-    config = json.loads(open(config_path).read())
+    with open('{0}/config.json'.format(config_path)) as f:
+      config = json.loads(f.read())
   except IOError:
     config = {}
 
   try:
-    sentence_file = args.sentence_file or config.get('sentence_file') or '~/.config/parit/sentences.json'
-    sentences = json.loads(open(os.path.expanduser(sentence_file)).read())
+    with open('{0}/sentences.json'.format(config_path)) as f:
+      sentences = json.loads(f.read())
   except IOError:
     sys.exit("You must provide a sentences file")
 
-  sender = args.sender or config.get('sender') or sys.exit('You must provide a sender name in either your config or an arg')
+  sender = config.get('sender') or sys.exit('You must provide a sender name in either your config or an arg')
 
-  creds_path = os.path.expanduser(args.credentials)
-  credentials = json.loads(open(creds_path).read())
+  try:
+    with open('{0}/credentials.json'.format(config_path)) as f:
+      credentials = json.loads(f.read())
+  except IOError:
+    sys.exit("You must provide a credentials file")
+
   session = scraper.login_cas_waterloo_works(credentials.get('username'), credentials.get('password'))
-  posting = scraper.get_posting(session, args.posting_id) or scraper.get_postings(session, args.term)[0]
+  postings = [scraper.get_posting(session, args.posting_id)] if args.posting_id else  scraper.get_postings(session, args.term)
 
-  letter = Letter(sender, config.get('address').split('/'), sentences, posting)
-  letter.write()
+  with open(os.path.expanduser('~/.config/parit/opening'), 'r') as f:
+      opening = f.read().replace('\n', ' ')
+  with open(os.path.expanduser('~/.config/parit/closing'), 'r') as f:
+      closing = f.read().replace('\n', ' ')
+
+  for posting in postings:
+    print 'Generating cover letter for {0}'.format(posting['organization'])
+    letter = Letter(opening, closing, sender, config.get('address').split('/'), sentences, posting)
+    letter.write()
+    print 'Done!'
 
 if __name__ == "__main__":
   main()
