@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import argparse
-import json
 import os
 from pylatex import Command, Document, NewLine, NoEscape
 import random
 import scraper
 import string
 import sys
+import yaml
 
 # Takes a sentence in the form of a string and splits it into its words with all punctuation removed.
 def process_input(line):
@@ -14,14 +14,11 @@ def process_input(line):
   return line.split()
 
 class Letter(object):
-  def __init__(self, opening, closing, sender, address, sentences, posting):
-    self.body = []
-    self.opening = opening.replace('$organization', posting['organization'])
-    self.closing = closing.replace('$organization', posting['organization'])
-    self.sender = sender
-    self.address = address
+  def __init__(self, config, sentences, posting):
+    self.config = config
     self.sentences = sentences
     self.posting = posting
+    self.body = []
 
   def select_sentence(self, word):
     sentence = self.sentences[word]
@@ -56,30 +53,34 @@ class Letter(object):
       self.posting.get('job__postal_code__zip_code_xx_x'))
 
     return_address = '{0}\\\\{1} {2} {3}'.format(
-      self.address[0],
-      self.address[1],
-      self.address[2],
-      self.address[3])
+      self.config['address'],
+      self.config['city'],
+      self.config['province'],
+      self.config['postal_code'])
+
+    opening = self.config['opening'].replace('$organization', self.posting.get('organization'))
+    closing = self.config['closing'].replace('$organization', self.posting.get('organization'))
     output = Document(documentclass='letter')
-    output.preamble.append(Command('signature', self.sender))
+    output.preamble.append(Command('signature', self.config['sender']))
     output.preamble.append(Command('address', NoEscape(return_address)))
     output.preamble.append(Command('date', NoEscape(r'\today')))
     output.append(Command('begin', ['letter', employer_address]))
     output.append(Command('opening', 'Dear Hiring Manager,'))
-    output.append(self.opening + self.write_body())
+    output.append(opening + self.write_body())
     output.append(NewLine())
     output.append(NewLine())
-    output.append(self.closing)
+    output.append(closing)
     output.append(Command('closing', 'Sincerely,'))
     output.append(Command('end', 'letter'))
 
     filename = '{0}_{1}'.format(self.posting['organization'], ' '.join(process_input(self.posting['job_title']))).replace(' ', '_').lower()
     output.generate_pdf(filename)
+    output.generate_tex(filename)
 
 def main():
   parser = argparse.ArgumentParser(description='This script will write you a cover letter')
-  parser.add_argument('-c', '--config', help=('Directory containing config file (config.json), '
-    'sentences file (sentences.json), and credentials file (credentials.json). You must have these '
+  parser.add_argument('-c', '--config', help=('Directory containing config file (config.yml), '
+    'sentences file (sentences.yml), and credentials file (credentials.yml). You must have these '
     'files for the program to run properly. (default: ~/.config/parit/)'),
     default='~/.config/parit/')
   parser.add_argument('-p', '--posting-id', help='Waterloo Works job posting Id')
@@ -88,36 +89,31 @@ def main():
 
   config_path = os.path.expanduser(args.config)
   try:
-    with open('{0}/config.json'.format(config_path)) as f:
-      config = json.loads(f.read())
+    with open('{0}/config.yml'.format(config_path)) as f:
+      config = yaml.load(f)
   except IOError:
     config = {}
 
   try:
-    with open('{0}/sentences.json'.format(config_path)) as f:
-      sentences = json.loads(f.read())
+    with open('{0}/sentences.yml'.format(config_path)) as f:
+      sentences = yaml.load(f)
   except IOError:
     sys.exit("You must provide a sentences file")
 
   sender = config.get('sender') or sys.exit('You must provide a sender name in either your config or an arg')
 
   try:
-    with open('{0}/credentials.json'.format(config_path)) as f:
-      credentials = json.loads(f.read())
+    with open('{0}/credentials.yml'.format(config_path)) as f:
+      credentials = yaml.load(f)
   except IOError:
     sys.exit("You must provide a credentials file")
 
   session = scraper.login_cas_waterloo_works(credentials.get('username'), credentials.get('password'))
-  postings = [scraper.get_posting(session, args.posting_id)] if args.posting_id else  scraper.get_postings(session, args.term)
-
-  with open(os.path.expanduser('~/.config/parit/opening'), 'r') as f:
-      opening = f.read().replace('\n', ' ')
-  with open(os.path.expanduser('~/.config/parit/closing'), 'r') as f:
-      closing = f.read().replace('\n', ' ')
+  postings = [scraper.get_posting(session, args.posting_id)] if args.posting_id else scraper.get_postings(session, args.term)
 
   for posting in postings:
     print 'Generating cover letter for {0}'.format(posting['organization'])
-    letter = Letter(opening, closing, sender, config.get('address').split('/'), sentences, posting)
+    letter = Letter(config, sentences, posting)
     letter.write()
     print 'Done!'
 
