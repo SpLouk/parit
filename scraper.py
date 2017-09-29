@@ -22,7 +22,22 @@ def login_cas_waterloo_works(username, password):
   return session
 
 def make_key(key):
-  return key.translate(string.maketrans(" ","_"), string.punctuation).lower()
+  key = key.translate(string.maketrans(" ","_"), string.punctuation).lower()
+  if ('country' in key):
+    return 'country'
+  elif ('province' in key):
+    return 'province'
+  elif ('city' in key):
+    return 'city'
+  elif ('address' in key):
+    if ('one' in key):
+      return 'address_one'
+    else:
+      return 'address_two'
+  elif ('postal_code' in key):
+    return 'postal_code'
+  else:
+    return key
 
 def parse_posting(posting):
   # there are malformed unicode characters in the HTML of this page, so we need to process it again and ignore errors

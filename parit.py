@@ -20,6 +20,23 @@ class Letter(object):
     self.posting = posting
     self.body = []
 
+  def employer_address(self):
+    return '{0}{1}{2}{3}{4}{5}'.format(
+      ('{0}\n'.format(self.posting.get('organization')) if self.posting.get('organization') else ''),
+      ('{0}\n'.format(self.posting.get('address_one')) if self.posting.get('address_one') else ''),
+      ('{0}\n'.format(self.posting.get('address_two')) if self.posting.get('address_two') else ''),
+      ('{0} '.format(self.posting.get('city')) if self.posting.get('city') else ''),
+      ('{0} '.format(self.posting.get('province')) if self.posting.get('province') else ''),
+      (self.posting.get('postal_code') if self.posting.get('postal_code') else ''))
+
+  def return_address(self):
+    return '{0}{1}{2} {3} {4}'.format(
+      ('{0}\\\\'.format(self.config.get('address_one')) if self.config.get('address_one') else ''),
+      ('{0}\\\\'.format(self.config.get('address_two')) if self.config.get('address_two') else ''),
+      self.config.get('city', ''),
+      self.config.get('province', ''),
+      self.config.get('postal_code', ''))
+
   def select_sentence(self, word):
     sentence = self.sentences[word]
     if isinstance(sentence, basestring):
@@ -45,26 +62,14 @@ class Letter(object):
 
   def write(self):
 
-    employer_address = '{0}\n{1}\n{2} {3} {4}'.format(
-      self.posting.get('organization'),
-      self.posting.get('job__address_line_one'),
-      self.posting.get('job__city'),
-      self.posting.get('job__province__state'),
-      self.posting.get('job__postal_code__zip_code_xx_x'))
-
-    return_address = '{0}\\\\{1} {2} {3}'.format(
-      self.config['address'],
-      self.config['city'],
-      self.config['province'],
-      self.config['postal_code'])
 
     opening = self.config['opening'].replace('$organization', self.posting.get('organization'))
     closing = self.config['closing'].replace('$organization', self.posting.get('organization'))
     output = Document(documentclass='letter')
     output.preamble.append(Command('signature', self.config['sender']))
-    output.preamble.append(Command('address', NoEscape(return_address)))
+    output.preamble.append(Command('address', NoEscape(self.return_address())))
     output.preamble.append(Command('date', NoEscape(r'\today')))
-    output.append(Command('begin', ['letter', employer_address]))
+    output.append(Command('begin', ['letter', self.employer_address()]))
     output.append(Command('opening', 'Dear Hiring Manager,'))
     output.append(opening + self.write_body())
     output.append(NewLine())
