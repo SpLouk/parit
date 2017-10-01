@@ -37,14 +37,6 @@ class Letter(object):
                 self.config.get('province', ''),
                 self.config.get('postal_code', ''))
 
-    def select_sentence(self, word):
-        sentence = self.sentences[word]
-        if isinstance(sentence, basestring):
-            return sentence
-        else:
-            index = int(random.uniform(0, len(sentence)))
-            return sentence[index]
-
     def write_body(self):
         self.body = ['']
         words = {}
@@ -56,7 +48,7 @@ class Letter(object):
                     words[word] = 1
 
         for word in sorted(words, key=words.get, reverse=True):
-            self.body.append(self.select_sentence(word.lower()))
+            self.body.append(self.sentences.get(word.lower()))
 
         return ' '.join(self.body)
 
@@ -80,22 +72,13 @@ class Letter(object):
         output.generate_pdf(filename)
         output.generate_tex(filename)
 
-def main():
-    parser = argparse.ArgumentParser(description='This script will write you a cover letter')
-    parser.add_argument('-c', '--config', help=('Directory containing config file (config.yml), '
-        'sentences file (sentences.yml), and credentials file (credentials.yml). You must have these '
-        'files for the program to run properly. (default: ~/.config/parit/)'),
-        default='~/.config/parit/')
-    parser.add_argument('-p', '--posting-id', help='Waterloo Works job posting Id')
-    parser.add_argument('-t', '--term', help='Search term for Waterloo Works')
-    args = parser.parse_args()
-
+def write_letter(args):
     config_path = os.path.expanduser(args.config)
     try:
         with open('{0}/config.yml'.format(config_path)) as f:
             config = yaml.load(f)
     except IOError:
-        config = {}
+        sys.exit("You must provide a config file")
 
     try:
         with open('{0}/sentences.yml'.format(config_path)) as f:
@@ -103,23 +86,38 @@ def main():
     except IOError:
         sys.exit("You must provide a sentences file")
 
-    sender = config.get('sender') or sys.exit('You must provide a sender name in either your config or an arg')
-
     try:
-        with open('{0}/credentials.yml'.format(config_path)) as f:
+        with open('{0}/redentials.yml'.format(config_path)) as f:
             credentials = yaml.load(f)
     except IOError:
-        sys.exit("You must provide a credentials file")
+        credentials = {}
 
-    session = scraper.login_cas_waterloo_works(credentials.get('username'), credentials.get('password'))
+    session = scraper.login_cas_waterloo_works(credentials.get('username', ''), credentials.get('password', ''))
 
-    postings = [scraper.get_posting(session, args.posting_id)] if args.posting_id else scraper.get_postings(session, args.term)
+    if (args.posting_file):
+        with open(args.posting_file) as f:
+            postings = yaml.load(f)
+    elif (args.posting_id):
+        postings = [scraper.get_posting(session, args.posting_id)]
+    elif (args.term):
+        postings = scraper.get_postings(session, args.term)
+    else:
+        sys.exit('You must provide a job posting, using either -p, -P or -t; See parit --help')
 
     for posting in postings:
-        print 'Generating cover letter for {0}'.format(posting['organization'])
+        print 'Generating cover letter for {0}'.format(posting.get('organization'))
         letter = Letter(config, sentences, posting)
         letter.write()
         print 'Done!'
 
-if __name__ == "__main__":
-    main()
+def main():
+    parser = argparse.ArgumentParser(description='This script will write you a cover letter')
+    parser.add_argument('-c', '--config', help=('Directory containing config file (config.yml), '
+        'sentences file (sentences.yml), and credentials file (credentials.yml). You must have these '
+        'files for the program to run properly. (default: ~/.config/parit/)'),
+        default='~/.config/parit/')
+    parser.add_argument('-p', '--posting-id', help='Waterloo Works job posting ID')
+    parser.add_argument('-P', '--posting-file', help='Supply a job posting as a YAML file')
+    parser.add_argument('-t', '--term', help='Search term for Waterloo Works')
+    args = parser.parse_args()
+    write_letter(args)

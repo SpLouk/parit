@@ -1,0 +1,14 @@
+sender: John Smith
+address_one: 456 Lorem Dr.
+city: Waterloo
+province: Ontario
+postal_code: XYZ 789
+
+opening: I am writing to apply for a position as a co-op student at your
+  company. I think that I would be a great fit at $organization.  I am a
+  fast learner, adaptable and love to take on new challenges.
+closing: Thank you for taking the time to review my application. I ask that you
+  also take a few minutes to look at my website, where you will be able
+  to see some of the projects that I have built in my free time; you can
+  also check out the source of those projects on my Github page. I look forward
+  to hearing from you.

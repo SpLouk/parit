@@ -1,0 +1,9 @@
+# Fill in your personal information below. This will be used for the return
+# address on the letter.
+sender:
+address_one:
+city:
+province:
+postal_code:
+opening: # write a short paragraph to be used as the opening of the letter
+closing: # write a short paragraph to be used as the closing of the letter

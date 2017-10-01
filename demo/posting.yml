@@ -1,0 +1,9 @@
+- organization: Foobar Inc.
+  job_title: Software Developer
+  address_one: 123 Anywhere St.
+  address_two: Apt. 5
+  city: Waterloo
+  province: Ontario
+  postal_code: 123 ABC
+  job_responsibilities: Be a great programmer.
+  required_skills: Be comfortable programming in object-oriented programming languages such as Python, C++ and Java.
