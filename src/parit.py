@@ -75,19 +75,19 @@ class Letter(object):
 def write_letter(args):
     config_path = os.path.expanduser(args.config)
     try:
-        with open('{0}/config.yml'.format(config_path)) as f:
+        with open('{0}config.yml'.format(config_path)) as f:
             config = yaml.load(f)
     except IOError:
         sys.exit("You must provide a config file")
 
     try:
-        with open('{0}/sentences.yml'.format(config_path)) as f:
+        with open('{0}sentences.yml'.format(config_path)) as f:
             sentences = yaml.load(f)
     except IOError:
         sys.exit("You must provide a sentences file")
 
     try:
-        with open('{0}/redentials.yml'.format(config_path)) as f:
+        with open('{0}credentials.yml'.format(config_path)) as f:
             credentials = yaml.load(f)
     except IOError:
         credentials = {}

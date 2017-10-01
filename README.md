@@ -1,47 +1,76 @@
 # Parit
+### Cover letter writing, automated
 
-`Parit` is a program that takes a dictionary of keywords and sentences
-and a job description ideally containing some of those key words and outputs a cover letter
-that can be submitted to that company.
+Parit is a program that takes a dictionary of keywords and sentences
+and a job description ideally containing some of those key words and
+outputs a cover letter that can be submitted to that company.
 
-## How To Use
-
-The letter writer reads input either from a command line argument or from file.
-The program then scans the provided dictionary for words that appear in the input,
-and adds the corresponding sentence to the cover letter.
-
-## Formatting the sentences file
-
-The sentences file is a JSON object with keys corresponding to the keywords that the program
-should look for in the job posting, and values being either sentences or an array of sentences
-from which the program will pick to put in the letter.
-
-Example sentences file:
+## Installation
 
 ```
-{
-  "python": "I am proficient at python.",
-  "scala": [
-    "I have become comfortable programming in Scala during my last eight month co-op term at Foobar, where I used it every day.",
-     "At Foobar, Scala was the primary language I coded in."
-   ]
-}
+git clone git@github.com:SpLouk/parit.git
+cd parit
+sudo make
+parit --help
 ```
 
-Example config file:
-
+#### Run a quick demo:
 ```
-{
-  "sender": "John Doe",
-  "address": "123 Lorem Dr./Waterloo/Ontario/ABC 123"
-}
+parit -c demo/ -P demo/posting.yml
 ```
 
-Example credentials file:
+## Setup
+
+In order to use Parit you must set up your `config.yml` and
+`sentences.yml` files.  If you want to automatically pull job postings
+from Waterloo Works, you must set up your `credentials.yml`
+file.
+
+Edit the files in `config/`, following the instructions given in each
+of them. Then, run `sudo make` again or copy the files into
+`~/.config/parit/` (or wherever you will keep your config files).
+
+You are all set up!
+
+## Use
+
+Parit is designed to automatically pull job postings from the
+University of Waterloo's Waterloo Works system. However, you can also
+supply your own job postings, in the form of a YAML file.
+
+### Waterloo Works
+
+Once you have set up your config, sentences, and credentials files,
+you can are ready to start generating cover letters from Waterloo
+Works. There are two ways to do this.
+
+The first is by supplying a posting ID:
 
 ```
-{
-  "username": "jdoe",
-  "password": "jdoe123"
-}
+parit -p POSTING_ID
 ```
+Note: you may need to run parit with 'sudo' if you have put read
+protection on your credentials file.
+
+The second way is to supply a search term:
+
+```
+parit -t SEARCH_TERM
+```
+
+Be aware that some search terms can return hundreds of results, and
+Parit will go ahead and generate cover letters for all of them. It
+might be best to run the search on Waterloo Works first, and make sure
+that the results are what you expect.
+
+### From File
+
+You can supply a job posting formatted as a YAML file for parit to
+work with:
+
+```
+parit -P FILE_PATH
+```
+
+Your job posting should have similar fields as the [demo
+posting](demo/posting.yml).
