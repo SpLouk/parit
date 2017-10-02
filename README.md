@@ -7,9 +7,13 @@ outputs a cover letter that can be submitted to that company.
 
 ## Installation
 
-Parit depends on [PyLatex](https://github.com/JelteF/PyLaTeX/), [PyYaml](https://github.com/yaml/pyyaml), and [lxml](https://github.com/lxml/lxml)
-Follow the installation instructions for these packages on their pages.
+Parit depends on [PyLatex](https://github.com/JelteF/PyLaTeX/),
+[PyYaml](https://github.com/yaml/pyyaml), and
+[lxml](https://github.com/lxml/lxml). Follow the installation
+instructions for these packages on their pages.
+
 Or, using [pip](https://github.com/pypa/pip):
+
 ```
 sudo pip install pylatex pyyaml lxml
 ```
