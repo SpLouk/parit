@@ -7,6 +7,14 @@ outputs a cover letter that can be submitted to that company.
 
 ## Installation
 
+Parit depends on [PyLatex](https://github.com/JelteF/PyLaTeX/), [PyYaml](https://github.com/yaml/pyyaml), and [lxml](https://github.com/lxml/lxml)
+Follow the installation instructions for these packages on their pages.
+Or, using [pip](https://github.com/pypa/pip):
+```
+sudo pip install pylatex pyyaml lxml
+```
+
+Install Parit:
 ```
 git clone git@github.com:SpLouk/parit.git
 cd parit
@@ -49,7 +57,7 @@ The first is by supplying a posting ID:
 ```
 parit -p POSTING_ID
 ```
-Note: you may need to run parit with 'sudo' if you have put read
+Note: you may need to run Parit with 'sudo' if you have put read
 protection on your credentials file.
 
 The second way is to supply a search term:
@@ -65,7 +73,7 @@ that the results are what you expect.
 
 ### From File
 
-You can supply a job posting formatted as a YAML file for parit to
+You can supply a job posting formatted as a YAML file for Parit to
 work with:
 
 ```
